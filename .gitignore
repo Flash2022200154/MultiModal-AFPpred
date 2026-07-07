@@ -36,6 +36,10 @@ esm2_t30_150M_UR50D/
 *.ckpt
 *.safetensors
 
+# Allow trained model checkpoints for deployment
+!checkpoints/
+!checkpoints/*.pth
+
 # Data (uncomment if you don't want to track data files)
 # data/*.csv
 

@@ -240,9 +240,14 @@ def run_single_experiment(
     patience: int = 4,
     batch_size: int = 128,
     lr: float = 1e-4,
+    save_checkpoint: bool = False,
+    checkpoint_path: Optional[str] = None,
 ) -> Dict[str, float]:
     """
     Run one complete training + evaluation cycle.
+
+    If save_checkpoint is True, saves the best model weights, standardizer
+    parameters, optimal threshold, and model config to checkpoint_path.
 
     Returns dict with keys: seed, accuracy, sensitivity, specificity,
     mcc, f1, auroc, auprc, best_thr
@@ -335,6 +340,40 @@ def run_single_experiment(
 
     print(f"  [seed={seed}]  AUC-ROC={mets['auroc']:.4f}  MCC={mets['mcc']:.4f}  F1={mets['f1']:.4f}")
 
+    # ── Save model checkpoint for deployment ──
+    if save_checkpoint and checkpoint_path is not None:
+        ckpt_dir = os.path.dirname(checkpoint_path)
+        if ckpt_dir:
+            os.makedirs(ckpt_dir, exist_ok=True)
+
+        checkpoint = {
+            # Trainable weights: fusion + BiLSTM + classifier
+            "model_state_dict": model.state_dict(),
+            # Feature standardizer parameters (needed for inference)
+            "phys_mean": model.phys_standardizer.mean_,
+            "phys_std": model.phys_standardizer.std_,
+            "ss_mean": model.ss_standardizer.mean_,
+            "ss_std": model.ss_standardizer.std_,
+            # Optimal decision threshold from validation set
+            "best_threshold": best_thr,
+            # Model hyperparameters (needed to reconstruct architecture)
+            "config": {
+                "dim_model": 512,
+                "physchem_dim": 256,
+                "ss_dim": 128,
+                "n_heads": 8,
+                "lstm_hidden": 128,
+                "classifier_hidden": [128, 64],
+                "dropout": 0.1,
+                "classifier_return_logits": True,
+            },
+            # Metadata
+            "seed": seed,
+            "test_metrics": mets,
+        }
+        torch.save(checkpoint, checkpoint_path)
+        print(f"  [seed={seed}]  Checkpoint saved to: {checkpoint_path}")
+
     return {"seed": seed, **mets, "best_thr": best_thr}
 
 
@@ -348,8 +387,12 @@ def main():
     batch_size = 128
     lr = 1e-4
 
-    esm_dir = str(Path(__file__).resolve().parents[2] / "ESM2")
+    repo_root = Path(__file__).resolve().parents[2]
+    esm_dir = str(repo_root / "ESM2")
     seeds = [42, 123, 456, 789, 1024]
+
+    # Save the best checkpoint from the primary run (seed=42)
+    checkpoint_path = str(repo_root / "checkpoints" / "best_model.pth")
 
     all_results: List[Dict[str, float]] = []
 
@@ -363,6 +406,8 @@ def main():
             seed=seed, esm_dir=esm_dir,
             max_epochs=max_epochs, patience=patience,
             batch_size=batch_size, lr=lr,
+            save_checkpoint=(seed == 42),
+            checkpoint_path=checkpoint_path,
         )
         all_results.append(result)
 

@@ -2,26 +2,6 @@ import torch
 from torch.utils.data import Dataset
 
 
-class FeatureDataset(Dataset):
-    """
-    A dataset that wraps precomputed features.
-    - esm_vecs: Tensor (N, esm_dim)
-    - phys_vecs: Tensor (N, physchem_dim)
-    - labels: Tensor (N,)
-    """
-    def __init__(self, esm_vecs: torch.Tensor, phys_vecs: torch.Tensor, labels: torch.Tensor):
-        assert esm_vecs.shape[0] == phys_vecs.shape[0] == labels.shape[0], "Size mismatch among inputs"
-        self.esm = esm_vecs.float()
-        self.phys = phys_vecs.float()
-        self.labels = labels.float()
-
-    def __len__(self):
-        return self.labels.shape[0]
-
-    def __getitem__(self, idx):
-        return self.esm[idx], self.phys[idx], self.labels[idx]
-
-
 class TripleFeatureDataset(Dataset):
     """
     Dataset for tri-modal features (ESM, PhysChem, SecondaryStructure).

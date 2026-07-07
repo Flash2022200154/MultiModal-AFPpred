@@ -26,6 +26,7 @@ MultiModal-AFPpred/
 ├── README.md
 ├── requirements.txt
 ├── .gitignore
+├── predict.py                            # Standalone prediction script
 ├── data/
 │   ├── data_positive.csv
 │   └── data_negative.csv
@@ -37,14 +38,15 @@ MultiModal-AFPpred/
 │   ├── enhanced_physchem_features.py    # AAIndex + wavelet features
 │   ├── feature_extractor.py             # ESM-2 embedding extractor
 │   ├── fusion.py                        # Cross-modal attention fusion
-│   ├── physchem_features.py             # Physicochemical feature extraction
 │   ├── pipeline.py                      # Full model pipeline (MultiModalAFPpred)
 │   ├── secondary_structure_features.py  # Secondary structure features
 │   ├── sequence_model.py                # Residual BiLSTM block
 │   ├── standardize.py                   # Feature standardization
 │   └── trainer.py                       # Training utilities
+├── checkpoints/
+│   └── best_model.pth                   # Trained model weights (seed=42)
 └── tests/
-    └── run_final_training_demo.py       # Training demo script
+    └── run_final_training_demo.py       # Training demo with repeated runs
 ```
 
 ## Requirements
@@ -81,8 +83,9 @@ The `data/` directory contains:
 - `data_negative.csv`: non-antimicrobial peptide sequences (negative samples)
 
 Peptides were preprocessed with:
-- Sequence similarity filtering (remove >70% similarity)
+- Standard amino acid filtering (20 AAs only)
 - Length filtering (5-50 amino acids)
+- Exact duplicate removal
 
 ## Usage
 
@@ -113,6 +116,25 @@ probabilities = model.predict_on_sequences(test_sequences)
 cd tests
 python run_final_training_demo.py
 ```
+
+This runs 5 independent training cycles with different random seeds (42, 123, 456, 789, 1024) and reports mean ± SD with 95% confidence intervals. Results are saved to `results/repeated_runs_summary.csv`.
+
+### Prediction
+
+Use the standalone prediction script with a trained checkpoint:
+
+```bash
+# Single sequence
+python predict.py --sequence "KWKLFKKILKVLNHV"
+
+# Batch prediction from FASTA file
+python predict.py --fasta input.fasta --output predictions.csv
+
+# Interactive mode
+python predict.py --interactive
+```
+
+The script loads `checkpoints/best_model.pth` by default. Use `--checkpoint` to specify a different path.
 
 ## Citation
 

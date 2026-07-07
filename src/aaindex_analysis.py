@@ -36,9 +36,20 @@ class AAIndexAnalyzer:
         return [self.keys[i] for i in keep]
 
 def analyze_antimicrobial_aaindex(threshold: float = 0.8) -> Dict[str, object]:
+    # Same 12 AMP-related AAindex keys as in enhanced_physchem_features.py
     keys = [
-        "EISD860101","FASG760101","ZIMJ680103","TANS770101",
-        "BURA740101","CHAM810101","GRAR740103","PONP930101","VASM830101"
+        "KYTJ820101",  # Hydrophobicity (Kyte-Doolittle)
+        "GRAR740102",  # Polarity (Grantham)
+        "JANJ780101",  # Surface accessibility (Janin)
+        "FAUJ880103",  # Van der Waals volume (Fauchere)
+        "ZIMJ680104",  # Bulkiness (Zimmerman)
+        "KLEP840101",  # Charge (Klein)
+        "RICJ880107",  # Protonation tendency (Richardson)
+        "BHAR880101",  # Backbone flexibility (Bhaskaran-Ponnuswamy)
+        "CHOP780101",  # Conformational constraint (Chothia)
+        "CHOP780203",  # Turn propensity (Chothia)
+        "MIYS990101",  # Folding free energy contribution (Miyazawa-Jernigan)
+        "ENGD860101",  # Solvation free energy (Eisenberg-McLachlan)
     ]
     analyzer = AAIndexAnalyzer(keys)
     corr = analyzer.correlation_matrix()
