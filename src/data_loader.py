@@ -29,43 +29,8 @@ def _clean_seq(seq: str) -> Optional[str]:
     return s
 
 
-def _kmer_set(seq: str, k: int = 3) -> set:
-    if len(seq) < k:
-        return {seq}  # degenerate case, treat as single k-mer
-    return {seq[i:i + k] for i in range(len(seq) - k + 1)}
-
-
-def _jaccard(a: set, b: set) -> float:
-    if not a and not b:
-        return 1.0
-    inter = len(a & b)
-    union = len(a | b)
-    return inter / union if union > 0 else 0.0
-
-
 def _length_filter(df: pd.DataFrame, seq_col: str, low: int, high: int) -> pd.DataFrame:
     return df[(df[seq_col].str.len() >= low) & (df[seq_col].str.len() <= high)].copy()
-
-
-def _near_duplicate_filter(df: pd.DataFrame, seq_col: str, k: int = 3, threshold: float = 0.7) -> pd.DataFrame:
-    """
-    Greedy near-duplicate removal by 3-mer Jaccard similarity.
-    Keep the first occurrence; drop later rows whose similarity >= threshold to any kept sequence.
-    Complexity: O(n^2) worst-case, acceptable for moderate dataset sizes.
-    """
-    sequences = df[seq_col].tolist()
-    kmers_list = [_kmer_set(s, k) for s in sequences]
-    keep_indices = []
-    for i, kset_i in enumerate(kmers_list):
-        is_dup = False
-        for kept_idx in keep_indices:
-            sim = _jaccard(kset_i, kmers_list[kept_idx])
-            if sim >= threshold:
-                is_dup = True
-                break
-        if not is_dup:
-            keep_indices.append(i)
-    return df.iloc[keep_indices].reset_index(drop=True)
 
 
 def _stratified_split(df: pd.DataFrame, label_col: str, val_size: float, random_state: int):
@@ -93,8 +58,6 @@ def load_data(
     random_state: int = 42,
     length_low: int = 5,
     length_high: int = 50,
-    neardup_k: int = 3,
-    neardup_threshold: float = 0.7,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Load dataset from CSV and return (train_df, val_df) after preprocessing.
@@ -135,11 +98,6 @@ def load_data(
 
     # 3) Exact duplicate removal
     df = df.drop_duplicates(subset=[seq_col]).reset_index(drop=True)
-
-    # (disabled) Near-duplicate removal by 3-mer Jaccard
-    # (kept for reference, uncomment below to re-enable)
-    # if len(df) > 1:
-    #     df = _near_duplicate_filter(df, seq_col, k=neardup_k, threshold=neardup_threshold)
 
     # 4) Stratified split by label
     if df[label_col].nunique() == 1:
